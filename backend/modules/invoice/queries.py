@@ -1,0 +1,1 @@
+# Invoice SQL queries - invoice_documents table

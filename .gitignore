@@ -1,0 +1,37 @@
+# env — ignore all .env files, but always track .env.example
+.env
+*.env
+!*.env.example
+backend/.env
+frontend/.env
+
+# node
+node_modules/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# n8n
+n8n/*.json
+
+# data
+uploads/
+backend/uploads/
+*.log
+
+# build
+dist/
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude memory
+.claude/
+
+# Root-level draft files (real versions are in backend/routers/ and backend/core/)
+/calendar.py
+/security.py

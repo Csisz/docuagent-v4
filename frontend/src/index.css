@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode */
+    --background:         0 0% 99%;
+    --foreground:         222 25% 10%;
+    --card:               0 0% 100%;
+    --card-foreground:    222 25% 10%;
+    --primary:            221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:          210 16% 96%;
+    --secondary-foreground: 222 20% 30%;
+    --muted:              210 14% 95%;
+    --muted-foreground:   215 14% 48%;
+    --accent:             210 14% 94%;
+    --accent-foreground:  222 25% 10%;
+    --destructive:        0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border:             214 18% 91%;
+    --input:              214 18% 91%;
+    --ring:               221 83% 53%;
+    --radius:             0.625rem;
+  }
+
+  .dark {
+    /* Dark mode */
+    --background:         222 28% 8%;
+    --foreground:         210 20% 92%;
+    --card:               222 24% 11%;
+    --card-foreground:    210 20% 92%;
+    --primary:            217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary:          217 20% 16%;
+    --secondary-foreground: 210 16% 72%;
+    --muted:              217 18% 14%;
+    --muted-foreground:   215 16% 52%;
+    --accent:             217 18% 15%;
+    --accent-foreground:  210 20% 92%;
+    --destructive:        0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border:             217 18% 18%;
+    --input:              217 18% 18%;
+    --ring:               217 91% 60%;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/30; }
+
+  /* Focus ring */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

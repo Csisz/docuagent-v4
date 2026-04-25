@@ -1,0 +1,2 @@
+-- Email module - Migration 003
+-- Tables: email_messages

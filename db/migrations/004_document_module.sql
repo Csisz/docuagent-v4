@@ -1,0 +1,2 @@
+-- Document module - Migration 004
+-- Tables: doc_documents

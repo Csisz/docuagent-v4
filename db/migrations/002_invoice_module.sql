@@ -1,0 +1,3 @@
+-- Invoice module - Migration 002
+-- Reference: db/migrations/ref_invoice.sql
+-- Tables: invoice_documents (with vat_rate, nav_status, billingo_id, human_verified_by)
