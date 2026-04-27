@@ -1,5 +1,5 @@
-﻿/**
- * Email Agent â€” main page scaffold.
+/**
+ * Email Agent — main page scaffold.
  * TODO:
  *   - EmailList (inbox with category/status filters)
  *   - ApprovalQueue (NEEDS_ATTENTION emails)

@@ -11,7 +11,7 @@ import logging
 from typing import Literal
 import core.database as db
 from fastapi import Depends, HTTPException
-from core.security import get_current_user
+from core.security import get_current_user, get_current_user_flexible
 
 log = logging.getLogger("docuagent")
 
@@ -77,6 +77,20 @@ def require_module(module: str):
         ): ...
     """
     async def _dep(user: dict = Depends(get_current_user)):
+        tenant_id = user.get("tenant_id")
+        if not tenant_id:
+            raise HTTPException(403, "No tenant context")
+        if not await is_module_enabled(tenant_id, module):
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "module_disabled", "module": module}
+            )
+    return _dep
+
+
+def require_module_flexible(module: str):
+    """Like require_module but accepts JWT from Bearer header or ?token= query param."""
+    async def _dep(user: dict = Depends(get_current_user_flexible)):
         tenant_id = user.get("tenant_id")
         if not tenant_id:
             raise HTTPException(403, "No tenant context")

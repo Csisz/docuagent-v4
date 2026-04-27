@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Root layout: Sidebar (fixed left) + main content area.
  * Outlet renders the current route's page component.
  */

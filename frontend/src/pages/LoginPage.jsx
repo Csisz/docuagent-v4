@@ -1,6 +1,6 @@
-﻿/**
- * Login page â€” clean centered card.
- * V3-hoz kĂ©pest: nincs API key modal, nincs beĂˇgyazott logo
+/**
+ * Login page — clean centered card.
+ * V3-hoz képest: nincs API key modal, nincs beágyazott logo
  * TODO: connect to AuthContext.login()
  */
 import { useState } from "react"
@@ -24,7 +24,7 @@ export default function LoginPage() {
       await login(email, password)
       navigate("/")
     } catch (err) {
-      setError(err.response?.data?.detail || "HibĂˇs email vagy jelszĂł")
+      setError(err.response?.data?.detail || "Hibás email vagy jelszó")
     } finally {
       setLoading(false)
     }
@@ -44,12 +44,12 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6">
-          <h1 className="text-white text-[18px] font-semibold mb-1">BejelentkezĂ©s</h1>
-          <p className="text-white/40 text-[13px] mb-6">Adja meg a hozzĂˇfĂ©rĂ©si adatait</p>
+          <h1 className="text-white text-[18px] font-semibold mb-1">Bejelentkezés</h1>
+          <p className="text-white/40 text-[13px] mb-6">Adja meg a hozzáférési adatait</p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-[12px] text-white/50 mb-1.5">Email cĂ­m</label>
+              <label className="block text-[12px] text-white/50 mb-1.5">Email cím</label>
               <input
                 type="email"
                 value={email}
@@ -60,12 +60,12 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-[12px] text-white/50 mb-1.5">JelszĂł</label>
+              <label className="block text-[12px] text-white/50 mb-1.5">Jelszó</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="â€˘â€˘â€˘â€˘â€˘â€˘â€˘â€˘"
+                placeholder="••••••••"
                 required
                 className="w-full h-10 px-3 rounded-lg bg-white/[0.06] border border-white/10 text-white text-[13px] placeholder:text-white/20 focus:outline-none focus:border-blue-500 transition-colors"
               />
@@ -79,7 +79,7 @@ export default function LoginPage() {
               className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-1"
             >
               {loading && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-              BejelentkezĂ©s
+              Bejelentkezés
             </button>
           </form>
         </div>

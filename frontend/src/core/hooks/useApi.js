@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Thin wrappers around react-query for common patterns.
  * Keeps component code clean.
  */

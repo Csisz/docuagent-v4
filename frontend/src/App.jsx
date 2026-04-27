@@ -1,5 +1,5 @@
-﻿/**
- * V4 App â€” Module-aware routing
+/**
+ * V4 App — Module-aware routing
  *
  * Routes are protected at two levels:
  *   1. Auth: ProtectedRoute wrapper
@@ -17,8 +17,8 @@ import LoginPage          from "@/pages/LoginPage"
 import DashboardPage      from "@/pages/DashboardPage"
 import ApprovalsPage      from "@/pages/ApprovalsPage"
 
-// Modules â€” uncomment as they are built
-// import InvoicePage  from "@/modules/invoice/InvoicePage"
+import InvoicePage   from "@/modules/invoice/InvoicePage"
+import SettingsPage  from "@/pages/SettingsPage"
 // import EmailPage    from "@/modules/email/EmailPage"
 // import DocumentPage from "@/modules/document/DocumentPage"
 
@@ -34,8 +34,9 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
 
-              {/* Module routes â€” wrapped in ModuleRoute */}
-              {/* <Route path="/invoice/*" element={<ModuleRoute module="invoice_agent"><InvoicePage /></ModuleRoute>} /> */}
+              {/* Module routes — wrapped in ModuleRoute */}
+              <Route path="/invoice/*"  element={<ModuleRoute module="invoice_agent"><InvoicePage /></ModuleRoute>} />
+              <Route path="/settings"  element={<SettingsPage />} />
               {/* <Route path="/email/*"   element={<ModuleRoute module="email_agent"><EmailPage /></ModuleRoute>} /> */}
 
               <Route path="*" element={<Navigate to="/" replace />} />

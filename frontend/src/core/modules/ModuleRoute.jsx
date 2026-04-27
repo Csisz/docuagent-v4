@@ -1,5 +1,5 @@
-﻿/**
- * ModuleRoute â€” route-level module guard.
+/**
+ * ModuleRoute — route-level module guard.
  * If the module is disabled, shows an upgrade prompt instead of the page.
  *
  * Usage:

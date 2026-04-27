@@ -1,44 +1,23 @@
-﻿/**
- * ModuleContext â€” feature flag state for the current tenant.
+/**
+ * V4 ModuleContext
+ * Reads enabled_modules from AuthContext (set at login).
+ * isEnabled(key) -> bool
  *
- * Fetches /core/features on login, exposes:
- *   isEnabled(moduleKey)  â†’ bool
- *   modules               â†’ { key: enabled } map
- *   plan                  â†’ "starter" | "pro" | "enterprise"
+ * Note: modules are fetched at login and on session restore.
+ * No separate API call needed here.
  */
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext } from "react"
 import { useAuth } from "@/core/auth/AuthContext"
-import { api } from "@/core/api"
 
-const ModuleContext = createContext({ modules: {}, isEnabled: () => false, plan: "starter" })
+const ModuleContext = createContext({ isEnabled: () => false })
 
 export function ModuleProvider({ children }) {
-  const { user } = useAuth()
-  const [modules, setModules] = useState({})
-  const [plan, setPlan]       = useState("starter")
-  const [loading, setLoading] = useState(true)
+  const { enabledModules, tenant } = useAuth()
 
-  useEffect(() => {
-    if (!user) { setModules({}); setLoading(false); return }
-
-    api.get("/core/features")
-      .then(({ data }) => {
-        const map = {}
-        data.modules.forEach(m => { map[m.key] = m.enabled })
-        setModules(map)
-        setPlan(data.plan ?? "starter")
-      })
-      .catch(() => setModules({}))
-      .finally(() => setLoading(false))
-  }, [user])
+  const isEnabled = (key) => enabledModules[key] ?? false
 
   return (
-    <ModuleContext.Provider value={{
-      modules,
-      plan,
-      loading,
-      isEnabled: (key) => modules[key] ?? false,
-    }}>
+    <ModuleContext.Provider value={{ modules: enabledModules, isEnabled, plan: tenant?.plan ?? "starter" }}>
       {children}
     </ModuleContext.Provider>
   )

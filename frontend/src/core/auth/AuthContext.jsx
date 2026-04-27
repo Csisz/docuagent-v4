@@ -1,120 +1,90 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+/**
+ * V4 AuthContext
+ * - Login: POST /core/auth/login
+ * - Me:    GET  /core/auth/me
+ * - Token: localStorage "access_token"
+ * - Login response includes enabled_modules -> stored in context
+ */
+import { createContext, useContext, useState, useEffect, useCallback } from "react"
+import { api } from "@/core/api"
 
-const AuthContext = createContext(null);
+const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user,            setUser]            = useState(null);
-  const [tenant,          setTenant]          = useState(null);
-  const [token,           setToken]           = useState(() => localStorage.getItem('docuagent_token'));
-  const [loading,         setLoading]         = useState(true);
-  const [onboardingDone,  setOnboardingDone]  = useState(false);
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [user,           setUser]           = useState(null)
+  const [tenant,         setTenant]         = useState(null)
+  const [enabledModules, setEnabledModules] = useState({})
+  const [loading,        setLoading]        = useState(true)
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
+  // On mount: restore session from localStorage
   useEffect(() => {
+    const token = localStorage.getItem("access_token")
     if (token) {
-      fetchMe();
+      fetchMe()
     } else {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []); // eslint-disable-line
+  }, [])
 
   async function fetchMe() {
     try {
-      const res = await fetch(`${apiUrl}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-        setTenant(data.tenant);
-        await checkOnboarding(token);
-      } else {
-        logout();
-      }
+      const res = await api.get("/core/auth/me")
+      setUser(res.data.user)
+      setTenant(res.data.tenant)
+      // Fetch modules separately (me endpoint does not return them)
+      const f = await api.get("/core/features")
+      const map = {}
+      f.data.data.modules.forEach(m => { map[m.key] = m.enabled })
+      setEnabledModules(map)
     } catch {
-      logout();
+      logout()
     } finally {
-      setLoading(false);
-    }
-  }
-
-  async function checkOnboarding(tok) {
-    try {
-      const res = await fetch(`${apiUrl}/api/onboarding/state`, {
-        headers: { Authorization: `Bearer ${tok}` }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setOnboardingDone(json.onboarding?.is_complete === true);
-      }
-    } catch {
-      // backend offline: treat as done so app still loads
-      setOnboardingDone(true);
-    } finally {
-      setOnboardingChecked(true);
+      setLoading(false)
     }
   }
 
   const login = useCallback(async (email, password) => {
-    const res = await fetch(`${apiUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || 'Bejelentkezés sikertelen');
-    }
-    const data = await res.json();
-    localStorage.setItem('docuagent_token', data.access_token);
-    setToken(data.access_token);
-    setUser(data.user);
-    setTenant(data.tenant);
-    await checkOnboarding(data.access_token);
-    return data;
-  }, [apiUrl]); // eslint-disable-line
+    const res = await api.post("/core/auth/login", { email, password })
+    const data = res.data
+    localStorage.setItem("access_token", data.access_token)
+    setUser(data.user)
+    setTenant(data.tenant)
+    // Login response already includes enabled_modules
+    setEnabledModules(data.enabled_modules ?? {})
+    return data
+  }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('docuagent_token');
-    setToken(null);
-    setUser(null);
-    setTenant(null);
-    setOnboardingDone(false);
-    setOnboardingChecked(false);
-  }, []);
+    localStorage.removeItem("access_token")
+    setUser(null)
+    setTenant(null)
+    setEnabledModules({})
+  }, [])
 
-  const authFetch = useCallback(async (url, options = {}) => {
-    const headers = { ...(options.headers || {}) };
-    if (!(options.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
-    }
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    return fetch(url, { ...options, headers });
-  }, [token]);
-
-  // Called by OnboardingPage after /complete
-  const setOnboardingComplete = useCallback((val = true) => {
-    setOnboardingDone(val);
-  }, []);
+  const isModuleEnabled = useCallback((key) => {
+    return enabledModules[key] ?? false
+  }, [enabledModules])
 
   return (
     <AuthContext.Provider value={{
-      user, tenant, token, loading,
-      login, logout, authFetch,
-      onboardingDone, onboardingChecked, setOnboardingComplete,
-      isAdmin: user?.role === 'admin',
-      isAgent: user?.role === 'agent' || user?.role === 'admin',
-      isDemo:  tenant?.slug === 'demo',
+      user,
+      tenant,
+      enabledModules,
+      loading,
+      login,
+      logout,
+      isModuleEnabled,
+      isAdmin: user?.role === "admin",
+      isAgent: user?.role === "agent" || user?.role === "admin",
+      isDemo:  tenant?.slug === "demo",
     }}>
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be inside AuthProvider');
-  return ctx;
-};
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth must be inside AuthProvider")
+  return ctx
+}

@@ -1,4 +1,4 @@
-﻿import clsx from "clsx"
+import clsx from "clsx"
 
 const variants = {
   default:  "bg-secondary text-secondary-foreground",

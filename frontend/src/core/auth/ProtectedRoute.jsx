@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Redirects to /login if user is not authenticated.
  * Wraps any route that requires auth.
  */

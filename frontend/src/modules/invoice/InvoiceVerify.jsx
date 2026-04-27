@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Invoice verification form.
  * Left: AI-extracted fields (editable)
  * Right: source email/document preview

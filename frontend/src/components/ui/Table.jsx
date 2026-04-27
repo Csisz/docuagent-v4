@@ -1,10 +1,10 @@
-﻿/**
+/**
  * Generic sortable table.
  * Usage: <DataTable columns={[...]} data={[...]} />
  */
 import clsx from "clsx"
 
-export function DataTable({ columns, data, onRowClick, emptyText = "Nincs talĂˇlat" }) {
+export function DataTable({ columns, data, onRowClick, emptyText = "Nincs találat" }) {
   if (!data?.length) {
     return (
       <div className="flex items-center justify-center h-32 text-[13px] text-muted-foreground">
@@ -35,7 +35,7 @@ export function DataTable({ columns, data, onRowClick, emptyText = "Nincs talĂ�
               )}>
               {columns.map(col => (
                 <td key={col.key} className="px-4 py-3 align-middle">
-                  {col.render ? col.render(row[col.key], row) : (row[col.key] ?? "â€”")}
+                  {col.render ? col.render(row[col.key], row) : (row[col.key] ?? "—")}
                 </td>
               ))}
             </tr>

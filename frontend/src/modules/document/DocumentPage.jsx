@@ -1,5 +1,5 @@
-﻿/**
- * Document Agent â€” main page scaffold.
+/**
+ * Document Agent — main page scaffold.
  * TODO:
  *   - DocumentLibrary (upload + list)
  *   - DocumentChat (RAG interface)

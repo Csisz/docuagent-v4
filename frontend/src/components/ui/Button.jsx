@@ -1,4 +1,4 @@
-﻿import clsx from "clsx"
+import clsx from "clsx"
 
 const variants = {
   primary:  "bg-blue-600 hover:bg-blue-700 text-white",

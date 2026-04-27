@@ -1,5 +1,5 @@
-﻿/**
- * Visual confidence indicator â€” replaces V3 emoji-based sentiment.
+/**
+ * Visual confidence indicator — replaces V3 emoji-based sentiment.
  * Shows a horizontal bar + percentage + color-coded label.
  */
 import clsx from "clsx"
@@ -9,7 +9,7 @@ export function ConfidenceBar({ value, showLabel = true }) {
   const color = pct >= 85 ? "bg-emerald-500"
               : pct >= 65 ? "bg-amber-400"
               : "bg-red-400"
-  const label = pct >= 85 ? "Magas" : pct >= 65 ? "KĂ¶zepes" : "Alacsony"
+  const label = pct >= 85 ? "Magas" : pct >= 65 ? "Közepes" : "Alacsony"
 
   return (
     <div className="flex items-center gap-2 min-w-[100px]">

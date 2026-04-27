@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shown when a user tries to access a disabled module.
  */
 const MODULE_NAMES = {
@@ -11,10 +11,10 @@ export default function UpgradePage({ module }) {
   const name = MODULE_NAMES[module] ?? module
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-      <div className="text-5xl mb-5">â—</div>
-      <h2 className="text-[20px] font-semibold text-foreground mb-2">{name} nincs aktivĂˇlva</h2>
+      <div className="text-5xl mb-5">◈</div>
+      <h2 className="text-[20px] font-semibold text-foreground mb-2">{name} nincs aktiválva</h2>
       <p className="text-[14px] text-muted-foreground max-w-sm mb-6">
-        Ez a modul az Ă–n csomagjĂˇban nem Ă©rhetĹ‘ el. Vegye fel a kapcsolatot az adminisztrĂˇtorral a modul aktivĂˇlĂˇsĂˇhoz.
+        Ez a modul az Ön csomagjában nem érhető el. Vegye fel a kapcsolatot az adminisztrátorral a modul aktiválásához.
       </p>
     </div>
   )
