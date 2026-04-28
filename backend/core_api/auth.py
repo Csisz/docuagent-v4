@@ -62,11 +62,12 @@ async def login(req: LoginRequest):
     await db.execute("UPDATE users SET last_login=NOW() WHERE id=$1", str(user["id"]))
 
     token = create_access_token({
-        "user_id":     str(user["id"]),
-        "tenant_id":   str(tenant["id"]),
-        "email":       user["email"],
-        "role":        user["role"],
-        "tenant_slug": tenant["slug"],
+        "user_id":      str(user["id"]),
+        "tenant_id":    str(tenant["id"]),
+        "email":        user["email"],
+        "role":         user["role"],
+        "tenant_slug":  tenant["slug"],
+        "is_superadmin": bool(user.get("is_superadmin", False)),
     })
 
     enabled_modules = await get_tenant_features(str(tenant["id"]))
@@ -76,12 +77,13 @@ async def login(req: LoginRequest):
         "access_token": token,
         "token_type":   "bearer",
         "user": {
-            "id":        str(user["id"]),
-            "tenant_id": str(tenant["id"]),
-            "email":     user["email"],
-            "full_name": user["full_name"],
-            "role":      user["role"],
-            "is_active": user["is_active"],
+            "id":           str(user["id"]),
+            "tenant_id":    str(tenant["id"]),
+            "email":        user["email"],
+            "full_name":    user["full_name"],
+            "role":         user["role"],
+            "is_active":    user["is_active"],
+            "is_superadmin": bool(user.get("is_superadmin", False)),
         },
         "tenant": {
             "id":         str(tenant["id"]),

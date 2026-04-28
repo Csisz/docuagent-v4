@@ -1,0 +1,40 @@
+// frontend/src/shell/layout/Sidebar.jsx — TWO PATCHES:
+//
+// PATCH 1: Import Shield icon (add to existing lucide-react import)
+// FIND:
+//   import { LayoutDashboard, CheckSquare, Mail, FileText, BookOpen,
+//     Users, Calendar, Zap, Settings, ScrollText, LogOut,
+//   } from "lucide-react"
+// REPLACE WITH:
+//   import { LayoutDashboard, CheckSquare, Mail, FileText, BookOpen,
+//     Users, Calendar, Zap, Settings, ScrollText, LogOut, Shield,
+//   } from "lucide-react"
+//
+//
+// PATCH 2: Add /admin to ADMIN_NAV and add superadmin badge in user footer.
+//
+// FIND:
+//   const ADMIN_NAV = [
+//     { to: "/settings", label: "Beállítások", Icon: Settings },
+//     { to: "/audit",    label: "Audit Log",   Icon: ScrollText },
+//   ]
+// REPLACE WITH:
+//   const ADMIN_NAV = [
+//     { to: "/settings", label: "Beállítások", Icon: Settings  },
+//     { to: "/admin",    label: "Admin",        Icon: Shield    },
+//   ]
+//
+//
+// PATCH 3: Show superadmin badge in user footer.
+// FIND:
+//   const { user, logout } = useAuth()
+// REPLACE WITH:
+//   const { user, logout, isSuperadmin } = useAuth()
+//
+// FIND (in user footer section):
+//   <div className="text-[9.5px] text-white/30 mt-0.5 capitalize">{user?.role}</div>
+// REPLACE WITH:
+//   <div className="text-[9.5px] text-white/30 mt-0.5 capitalize flex items-center gap-1">
+//     {user?.role}
+//     {isSuperadmin && <Shield size={8} className="text-purple-400" />}
+//   </div>

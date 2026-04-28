@@ -1,0 +1,9 @@
+/* frontend/src/index.css — ADD this utility class (append to end of file)
+   Used in UsersTab form inputs for consistent styling */
+
+@layer utilities {
+  .input-base {
+    @apply w-full h-8 px-3 text-[12px] rounded-lg border border-border bg-background
+           text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500;
+  }
+}

@@ -87,6 +87,7 @@ from core_api.rag      import router as rag_router
 from core_api.audit    import router as audit_router
 from core_api.metering import router as metering_router
 from core_api.settings import router as settings_router
+from core_api.admin   import router as admin_router
 
 app.include_router(auth_router)
 app.include_router(features_router)
@@ -97,6 +98,7 @@ app.include_router(rag_router)
 app.include_router(audit_router)
 app.include_router(metering_router)
 app.include_router(settings_router)
+app.include_router(admin_router)
 
 from modules.invoice.router import router as invoice_router
 app.include_router(invoice_router)

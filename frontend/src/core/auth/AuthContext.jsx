@@ -74,9 +74,10 @@ export function AuthProvider({ children }) {
       login,
       logout,
       isModuleEnabled,
-      isAdmin: user?.role === "admin",
-      isAgent: user?.role === "agent" || user?.role === "admin",
-      isDemo:  tenant?.slug === "demo",
+      isAdmin:      user?.role === "admin" || user?.is_superadmin === true,
+      isAgent:      user?.role === "agent" || user?.role === "admin",
+      isDemo:       tenant?.slug === "demo",
+      isSuperadmin: user?.is_superadmin === true,
     }}>
       {children}
     </AuthContext.Provider>

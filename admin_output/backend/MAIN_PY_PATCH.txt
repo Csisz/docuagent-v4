@@ -1,0 +1,7 @@
+# backend/main.py — ADD these lines after the existing router imports:
+#
+# from core_api.admin import router as admin_router
+# app.include_router(admin_router)
+#
+# Also: update get_me endpoint in core_api/auth.py to include is_superadmin field.
+# See auth_patch.py in this delivery.

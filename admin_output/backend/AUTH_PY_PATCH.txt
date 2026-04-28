@@ -1,0 +1,47 @@
+# backend/core_api/auth.py — PATCH: get_me and login must expose is_superadmin
+#
+# In the /me endpoint, the existing line:
+#   "user": {k: (str(v) if hasattr(v, 'hex') else v) for k, v in dict(user).items() if k != "hashed_password"},
+# already returns all columns, so is_superadmin will appear automatically after the migration.
+#
+# In the /login endpoint, update the token payload to include is_superadmin:
+
+# FIND this block:
+#     token = create_access_token({
+#         "user_id":     str(user["id"]),
+#         "tenant_id":   str(tenant["id"]),
+#         "email":       user["email"],
+#         "role":        user["role"],
+#         "tenant_slug": tenant["slug"],
+#     })
+
+# REPLACE WITH:
+#     token = create_access_token({
+#         "user_id":        str(user["id"]),
+#         "tenant_id":      str(tenant["id"]),
+#         "email":          user["email"],
+#         "role":           user["role"],
+#         "tenant_slug":    tenant["slug"],
+#         "is_superadmin":  bool(user.get("is_superadmin", False)),
+#     })
+
+# Also update the user dict in the login response:
+# FIND:
+#         "user": {
+#             "id":        str(user["id"]),
+#             "tenant_id": str(tenant["id"]),
+#             "email":     user["email"],
+#             "full_name": user["full_name"],
+#             "role":      user["role"],
+#             "is_active": user["is_active"],
+#         },
+# REPLACE WITH:
+#         "user": {
+#             "id":            str(user["id"]),
+#             "tenant_id":     str(tenant["id"]),
+#             "email":         user["email"],
+#             "full_name":     user["full_name"],
+#             "role":          user["role"],
+#             "is_active":     user["is_active"],
+#             "is_superadmin": bool(user.get("is_superadmin", False)),
+#         },

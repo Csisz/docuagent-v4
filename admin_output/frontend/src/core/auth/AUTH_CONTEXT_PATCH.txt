@@ -1,0 +1,15 @@
+// frontend/src/core/auth/AuthContext.jsx — ADD to the Provider value:
+//
+// isSuperadmin: user?.is_superadmin === true,
+//
+// The full value object becomes:
+//   value={{
+//     user, tenant, enabledModules, loading,
+//     login, logout, isModuleEnabled,
+//     isAdmin:      user?.role === "admin" || user?.is_superadmin === true,
+//     isAgent:      user?.role === "agent" || user?.role === "admin",
+//     isDemo:       tenant?.slug === "demo",
+//     isSuperadmin: user?.is_superadmin === true,
+//   }}
+//
+// No other changes needed — login response already includes is_superadmin after the backend patch.

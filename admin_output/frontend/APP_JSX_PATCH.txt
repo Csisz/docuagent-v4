@@ -1,0 +1,31 @@
+// frontend/src/App.jsx — ADD admin route
+//
+// STEP 1: Add imports at the top:
+//   import AdminRoute  from "@/core/auth/AdminRoute"
+//   import AdminPage   from "@/pages/admin/AdminPage"
+//
+//
+// STEP 2: Add the route inside the ProtectedRoute/AppLayout wrapper.
+// FIND:
+//   <Route path="/settings"  element={<SettingsPage />} />
+// ADD AFTER:
+//   <Route
+//     path="/admin"
+//     element={
+//       <AdminRoute>
+//         <AdminPage />
+//       </AdminRoute>
+//     }
+//   />
+//
+//
+// Full App.jsx routes section after patch:
+//
+//   <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+//     <Route index element={<DashboardPage />} />
+//     <Route path="/approvals" element={<ApprovalsPage />} />
+//     <Route path="/invoice/*"  element={<ModuleRoute module="invoice_agent"><InvoicePage /></ModuleRoute>} />
+//     <Route path="/settings"  element={<SettingsPage />} />
+//     <Route path="/admin"     element={<AdminRoute><AdminPage /></AdminRoute>} />
+//     <Route path="*" element={<Navigate to="/" replace />} />
+//   </Route>
