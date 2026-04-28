@@ -19,8 +19,8 @@ export default function InvoicePage() {
       {/* Header */}
       <div className="pt-1 flex items-center justify-between">
         <div>
-          <h1 className="text-[20px] font-semibold text-foreground tracking-tight">Invoice Agent</h1>
-          <p className="text-[12px] text-muted-foreground mt-0.5">Számla feldolgozás és exportálás</p>
+          <h1 className="text-[22px] font-semibold text-foreground tracking-tight">Invoice Agent</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">AI-powered invoice processing & export</p>
         </div>
         {(tab === "list" || tab === "queue") && (
           <button
@@ -31,7 +31,7 @@ export default function InvoicePage() {
             className="flex items-center gap-2 h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-medium rounded-lg transition-colors"
           >
             <Upload size={14} />
-            Fájlok feltöltése
+            Upload Invoices
           </button>
         )}
       </div>
@@ -39,13 +39,13 @@ export default function InvoicePage() {
       {/* Tabs */}
       <div className="flex gap-0.5 border-b border-border">
         <TabBtn active={tab === "list"} icon={FileText} onClick={() => setTab("list")}>
-          Lista
+          Invoices
         </TabBtn>
         <TabBtn active={tab === "queue"} icon={ListOrdered} onClick={() => setTab("queue")}>
-          Feldolgozási sor
+          Upload Queue
         </TabBtn>
         <TabBtn active={tab === "stats"} icon={BarChart3} onClick={() => setTab("stats")}>
-          Statisztikák
+          Statistics
         </TabBtn>
       </div>
 

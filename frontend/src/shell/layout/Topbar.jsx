@@ -1,18 +1,18 @@
 import { useLocation } from "react-router-dom"
 import { useGet } from "@/core/hooks/useApi"
-import { ChevronRight, Bell } from "lucide-react"
+import { ChevronRight, Bell, Search } from "lucide-react"
 
 const ROUTES = {
-  "/":          { label: "Dashboard",     parent: null },
-  "/approvals": { label: "Jóváhagyások",  parent: "Főmenü" },
-  "/email":     { label: "Email Agent",   parent: "Modulok" },
-  "/invoice":   { label: "Invoice Agent", parent: "Modulok" },
-  "/document":  { label: "Document Agent",parent: "Modulok" },
-  "/crm":       { label: "CRM",           parent: "Modulok" },
-  "/calendar":  { label: "Naptár",        parent: "Modulok" },
-  "/agents":    { label: "Agent Builder", parent: "Modulok" },
-  "/settings":  { label: "Beállítások",   parent: "Admin" },
-  "/audit":     { label: "Audit Log",     parent: "Admin" },
+  "/":          { label: "Dashboard",    parent: null      },
+  "/approvals": { label: "Approvals",   parent: "Core"    },
+  "/email":     { label: "Email Agent", parent: "Modules" },
+  "/invoice":   { label: "Invoice Agent", parent: "Modules" },
+  "/document":  { label: "Documents",   parent: "Modules" },
+  "/crm":       { label: "CRM",         parent: "Modules" },
+  "/calendar":  { label: "Calendar",    parent: "Modules" },
+  "/agents":    { label: "Agent Builder", parent: "Modules" },
+  "/settings":  { label: "Settings",    parent: "Admin"   },
+  "/audit":     { label: "Audit Log",   parent: "Admin"   },
 }
 
 export default function Topbar() {
@@ -38,14 +38,19 @@ export default function Topbar() {
 
       {/* Right side */}
       <div className="flex items-center gap-2">
-        {pendingCount > 0 && (
-          <span className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full">
-            {pendingCount} jóváhagyás vár
-          </span>
-        )}
+        {/* Search */}
+        <button className="flex items-center gap-2 h-8 px-3 rounded-lg border border-border bg-muted/50 text-muted-foreground hover:bg-muted transition-colors duration-150">
+          <Search size={13} />
+          <span className="text-[12px] hidden sm:block">Quick search...</span>
+          <kbd className="hidden sm:flex items-center gap-0.5 text-[10px] font-medium bg-background border border-border rounded px-1 py-0.5 leading-none">
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* Notification bell */}
         <button
           className="relative w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150"
-          title="Értesítések"
+          title="Notifications"
         >
           <Bell size={15} />
           {pendingCount > 0 && (

@@ -1,34 +1,35 @@
 import { NavLink } from "react-router-dom"
 import { useAuth }    from "@/core/auth/AuthContext"
 import { useModules } from "@/core/modules/ModuleContext"
+import { useGet }     from "@/core/hooks/useApi"
 import {
   LayoutDashboard, CheckSquare, Mail, FileText, BookOpen,
-  Users, Calendar, Zap, Settings, ScrollText, LogOut,
+  Users, Calendar, Zap, Settings, ScrollText, LogOut, Shield,
 } from "lucide-react"
 import clsx from "clsx"
 
 // ── Nav config ─────────────────────────────────────────────────
 const CORE_NAV = [
-  { to: "/",          end: true,  label: "Dashboard",    Icon: LayoutDashboard },
-  { to: "/approvals", end: false, label: "Jóváhagyások", Icon: CheckSquare },
+  { to: "/",          end: true,  label: "Dashboard",  Icon: LayoutDashboard },
+  { to: "/approvals", end: false, label: "Approvals",  Icon: CheckSquare     },
 ]
 
 const MODULE_NAV = [
-  { module: "email_agent",     to: "/email",    label: "Email Agent",    Icon: Mail },
-  { module: "invoice_agent",   to: "/invoice",  label: "Invoice Agent",  Icon: FileText },
-  { module: "document_agent",  to: "/document", label: "Document Agent", Icon: BookOpen },
-  { module: "crm_module",      to: "/crm",      label: "CRM",            Icon: Users },
-  { module: "calendar_module", to: "/calendar", label: "Naptár",         Icon: Calendar },
-  { module: "agent_builder",   to: "/agents",   label: "Agent Builder",  Icon: Zap },
+  { module: "email_agent",     to: "/email",    label: "Email Agent",   Icon: Mail     },
+  { module: "invoice_agent",   to: "/invoice",  label: "Invoice Agent", Icon: FileText },
+  { module: "document_agent",  to: "/document", label: "Documents",     Icon: BookOpen },
+  { module: "crm_module",      to: "/crm",      label: "CRM",           Icon: Users    },
+  { module: "calendar_module", to: "/calendar", label: "Calendar",      Icon: Calendar },
+  { module: "agent_builder",   to: "/agents",   label: "Agent Builder", Icon: Zap      },
 ]
 
 const ADMIN_NAV = [
-  { to: "/settings", label: "Beállítások", Icon: Settings },
-  { to: "/audit",    label: "Audit Log",   Icon: ScrollText },
+  { to: "/settings", label: "Settings", Icon: Settings },
+  { to: "/admin",    label: "Admin",    Icon: Shield   },
 ]
 
 // ── NavItem ────────────────────────────────────────────────────
-function NavItem({ to, end, label, Icon }) {
+function NavItem({ to, end, label, Icon, badge }) {
   return (
     <NavLink to={to} end={end ?? false} className="block">
       {({ isActive }) => (
@@ -51,7 +52,12 @@ function NavItem({ to, end, label, Icon }) {
               isActive ? "text-blue-400" : "text-white/35"
             )}
           />
-          <span>{label}</span>
+          <span className="flex-1">{label}</span>
+          {badge > 0 && (
+            <span className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-bold px-1">
+              {badge}
+            </span>
+          )}
         </div>
       )}
     </NavLink>
@@ -72,8 +78,11 @@ function NavSection({ label, children }) {
 
 // ── Sidebar ────────────────────────────────────────────────────
 export default function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user, logout, isSuperadmin } = useAuth()
   const { isEnabled }    = useModules()
+
+  const { data: approvals } = useGet("approvals-count", "/core/approve?status=pending&limit=1")
+  const pendingCount = approvals?.total ?? 0
 
   const enabledModules = MODULE_NAV.filter(m => isEnabled(m.module))
 
@@ -85,7 +94,7 @@ export default function Sidebar() {
     .toUpperCase()
 
   return (
-    <aside className="w-[220px] flex-shrink-0 h-screen flex flex-col bg-[#0f1929] border-r border-white/[0.06]">
+    <aside className="w-[220px] flex-shrink-0 h-screen flex flex-col bg-[#0f1117] border-r border-white/[0.06]">
 
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-white/[0.06] flex-shrink-0">
@@ -101,12 +110,18 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
 
-        <NavSection label="Főmenü">
-          {CORE_NAV.map(item => <NavItem key={item.to} {...item} />)}
+        <NavSection label="Core">
+          {CORE_NAV.map(item => (
+            <NavItem
+              key={item.to}
+              {...item}
+              badge={item.to === "/approvals" ? pendingCount : 0}
+            />
+          ))}
         </NavSection>
 
         {enabledModules.length > 0 && (
-          <NavSection label="Modulok">
+          <NavSection label="Modules">
             {enabledModules.map(item => <NavItem key={item.to} {...item} />)}
           </NavSection>
         )}
@@ -129,11 +144,14 @@ export default function Sidebar() {
             <div className="text-[12px] font-medium text-white/80 truncate leading-none">
               {user?.full_name || user?.email}
             </div>
-            <div className="text-[9.5px] text-white/30 mt-0.5 capitalize">{user?.role}</div>
+            <div className="text-[9.5px] text-white/30 mt-0.5 capitalize flex items-center gap-1">
+              {user?.role}
+              {isSuperadmin && <Shield size={8} className="text-purple-400" />}
+            </div>
           </div>
           <button
             onClick={logout}
-            title="Kijelentkezés"
+            title="Sign out"
             className="flex-shrink-0 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/5 transition-all duration-150"
           >
             <LogOut size={13} />

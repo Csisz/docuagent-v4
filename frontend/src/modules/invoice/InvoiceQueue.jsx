@@ -7,24 +7,23 @@ import {
 import InvoiceVisualValidator from "./InvoiceVisualValidator"
 import { ConfirmModal } from "@/components/ui/ConfirmModal"
 
-// ── Constants ─────────────────────────────────────────────────────
-
-const ACCEPTED = ".pdf,.jpg,.jpeg,.png,.webp,.docx"
+// ── Constants ──────────────────────────────────────────────────
+const ACCEPTED  = ".pdf,.jpg,.jpeg,.png,.webp,.docx"
 const MAX_BYTES = 10 * 1024 * 1024
 
 const TERMINAL = new Set(["ocr_ready", "extracted", "pending_review", "verified", "exported", "rejected", "error"])
 
 const STATUS_META = {
-  uploading:      { label: "Feltöltés...",   color: "#64748b", spin: true  },
-  extracting:     { label: "AI kinyerés...", color: "#2563eb", spin: true  },
-  extracted:      { label: "Kinyerve",       color: "#2563eb", spin: false },
-  pending_review: { label: "Felülvizsgálat", color: "#d97706", spin: false },
-  ocr_processing: { label: "OCR térkép...",  color: "#2563eb", spin: true  },
-  ocr_ready:      { label: "Kész",           color: "#16a34a", spin: false },
-  verified:       { label: "Ellenőrizve",    color: "#2563eb", spin: false },
-  exported:       { label: "Exportálva",     color: "#16a34a", spin: false },
-  rejected:       { label: "Elutasítva",     color: "#dc2626", spin: false },
-  error:          { label: "Hiba",           color: "#dc2626", spin: false },
+  uploading:      { label: "Uploading…",    color: "#64748b", spin: true  },
+  extracting:     { label: "AI Extraction…",color: "#2563eb", spin: true  },
+  extracted:      { label: "Extracted",     color: "#2563eb", spin: false },
+  pending_review: { label: "Review",        color: "#d97706", spin: false },
+  ocr_processing: { label: "OCR mapping…",  color: "#2563eb", spin: true  },
+  ocr_ready:      { label: "Ready",         color: "#16a34a", spin: false },
+  verified:       { label: "Verified",      color: "#2563eb", spin: false },
+  exported:       { label: "Exported",      color: "#16a34a", spin: false },
+  rejected:       { label: "Rejected",      color: "#dc2626", spin: false },
+  error:          { label: "Error",         color: "#dc2626", spin: false },
 }
 
 function fmtAmt(n, cur = "HUF") {
@@ -34,40 +33,40 @@ function fmtAmt(n, cur = "HUF") {
 
 function fmtTime(iso) {
   if (!iso) return ""
-  const d = new Date(iso)
-  const now = new Date()
+  const d      = new Date(iso)
+  const now    = new Date()
   const diffMs = now - d
   const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1)  return "most"
-  if (diffMin < 60) return `${diffMin} perce`
+  if (diffMin < 1)  return "just now"
+  if (diffMin < 60) return `${diffMin}m ago`
   const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH} órája`
-  return d.toLocaleDateString("hu-HU")
+  if (diffH < 24) return `${diffH}h ago`
+  return d.toLocaleDateString("en-US")
 }
 
 function DueDateBadge({ dueDate }) {
   if (!dueDate) return null
-  const today = new Date()
-  const due   = new Date(dueDate)
+  const today    = new Date()
+  const due      = new Date(dueDate)
   const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24))
   if (diffDays < 0) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 999, background: "#fee2e2", color: "#dc2626" }}>
-        ⚠ Lejárt {Math.abs(diffDays)} napja
+        ⚠ {Math.abs(diffDays)}d overdue
       </span>
     )
   }
   if (diffDays <= 3) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 999, background: "#fef3c7", color: "#d97706" }}>
-        ⏰ {diffDays} nap múlva esedékes
+        ⏰ Due in {diffDays}d
       </span>
     )
   }
   if (diffDays <= 7) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 999, background: "#fef9c3", color: "#ca8a04" }}>
-        📅 {diffDays} nap ({dueDate})
+        📅 {diffDays}d ({dueDate})
       </span>
     )
   }
@@ -78,39 +77,36 @@ function fileIcon(inv) {
   const src = inv.source_type
   if (src === "email") return <Mail size={18} className="text-violet-500" />
   const fn = (inv.filename || inv.source_id || "").toLowerCase()
-  if (fn.endsWith(".pdf")) return <FileText size={18} className="text-red-500" />
+  if (fn.endsWith(".pdf"))              return <FileText size={18} className="text-red-500" />
   if (fn.match(/\.(jpg|jpeg|png|webp)$/)) return <Image size={18} className="text-blue-500" />
-  if (fn.match(/\.docx?$/)) return <FileSpreadsheet size={18} className="text-indigo-500" />
+  if (fn.match(/\.docx?$/))            return <FileSpreadsheet size={18} className="text-indigo-500" />
   return <FileText size={18} className="text-gray-400" />
 }
 
 function displayName(inv) {
-  const name = inv.filename || (inv.source_id ? inv.source_id.split(/[\\/]/).pop() : null) || "Ismeretlen fájl"
+  const name = inv.filename || (inv.source_id ? inv.source_id.split(/[\\/]/).pop() : null) || "Unknown file"
   return name.length > 35 ? name.slice(0, 32) + "…" : name
 }
 
-// ── Main component ────────────────────────────────────────────────
-
+// ── Main component ─────────────────────────────────────────────
 export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFileInputRef }) {
-  const [invoices,   setInvoices]   = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [dragging,   setDragging]   = useState(false)
-  const [uploading,  setUploading]  = useState(false)   // file upload in progress
-  const [selectedId, setSelectedId] = useState(null)    // for validator modal
-  const [fullInvoice, setFullInvoice] = useState(null)  // full invoice for validator
-  const [confirmDelete, setConfirmDelete] = useState(null)  // { invoiceId, invoiceName }
+  const [invoices,      setInvoices]      = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [dragging,      setDragging]      = useState(false)
+  const [uploading,     setUploading]     = useState(false)
+  const [selectedId,    setSelectedId]    = useState(null)
+  const [fullInvoice,   setFullInvoice]   = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const fileInputRef = useRef(null)
-  const pollRef      = useRef({})   // { invoice_id: intervalId }
+  const pollRef      = useRef({})
   const containerRef = useRef(null)
 
-  // Sync external ref (from InvoicePage upload button) to the hidden input
   const setFileInputRef = useCallback(node => {
     fileInputRef.current = node
     if (externalFileInputRef) externalFileInputRef.current = node
   }, [externalFileInputRef])
 
-  // ── API helpers ───────────────────────────────────────────────
   function authHeader() {
     const token = localStorage.getItem("access_token")
     return { Authorization: `Bearer ${token}` }
@@ -118,11 +114,10 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
 
   const fetchQueue = useCallback(async () => {
     try {
-      const res  = await fetch("/invoice/queue?limit=50", { headers: authHeader() })
-      const json = await res.json()
+      const res   = await fetch("/invoice/queue?limit=50", { headers: authHeader() })
+      const json  = await res.json()
       const items = json?.data?.items ?? []
       setInvoices(items)
-      // Start polling for any non-terminal invoices
       items.forEach(inv => {
         if (inv.id && !TERMINAL.has(inv.processing_status)) startPolling(inv.id)
       })
@@ -135,14 +130,13 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
     return () => Object.values(pollRef.current).forEach(clearInterval)
   }, [fetchQueue])
 
-  // ── Polling ───────────────────────────────────────────────────
   function startPolling(invoiceId) {
     if (!invoiceId || pollRef.current[invoiceId]) return
     pollRef.current[invoiceId] = setInterval(async () => {
       try {
-        const res  = await fetch(`/invoice/${invoiceId}/status`, { headers: authHeader() })
+        const res    = await fetch(`/invoice/${invoiceId}/status`, { headers: authHeader() })
         if (!res.ok) return
-        const json = await res.json()
+        const json   = await res.json()
         const status = json?.data
         if (!status) return
 
@@ -159,7 +153,6 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
     }, 2000)
   }
 
-  // ── File upload ───────────────────────────────────────────────
   async function uploadFile(file) {
     const token = localStorage.getItem("access_token")
     const form  = new FormData()
@@ -204,7 +197,6 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
     setUploading(false)
   }
 
-  // ── Drag & drop ───────────────────────────────────────────────
   function onDragOver(e) { e.preventDefault(); setDragging(true) }
   function onDragLeave(e) {
     if (!containerRef.current?.contains(e.relatedTarget)) setDragging(false)
@@ -215,7 +207,6 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
     handleFiles(e.dataTransfer.files)
   }
 
-  // ── Open validator ────────────────────────────────────────────
   async function openValidator(inv) {
     if (!inv.id) return
     setSelectedId(inv.id)
@@ -239,17 +230,15 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
   async function handleDelete(invoiceId) {
     const token = localStorage.getItem("access_token")
     const res = await fetch(`/invoice/${invoiceId}`, {
-      method: "DELETE",
+      method:  "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) {
       setInvoices(prev => prev.filter(i => i.id !== invoiceId))
       onRefreshStats?.()
     }
-    // errors surface via the modal's onConfirm rejection — queue stays intact
   }
 
-  // ── Render ────────────────────────────────────────────────────
   return (
     <div
       ref={containerRef}
@@ -263,7 +252,7 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-blue-500/10 border-4 border-dashed border-blue-400 pointer-events-none">
           <div className="bg-white rounded-2xl px-8 py-6 shadow-xl flex items-center gap-3">
             <Upload size={24} className="text-blue-500" />
-            <span className="text-[15px] font-semibold text-blue-700">Engedje el a fájlokat</span>
+            <span className="text-[15px] font-semibold text-blue-700">Drop files here</span>
           </div>
         </div>
       )}
@@ -271,15 +260,15 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
       {/* Queue header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[15px] font-semibold text-foreground">Feldolgozási sor</h2>
+          <h2 className="text-[15px] font-semibold text-foreground">Processing Queue</h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            {invoices.length} számla · fájlokat ide is húzhat
+            {invoices.length} invoice{invoices.length !== 1 ? "s" : ""} · drop files here to upload
           </p>
         </div>
         <div className="flex items-center gap-2">
           {uploading && (
             <span className="flex items-center gap-1.5 text-[12px] text-blue-600">
-              <Loader2 size={12} className="animate-spin" /> Feltöltés...
+              <Loader2 size={12} className="animate-spin" /> Uploading…
             </span>
           )}
           <input
@@ -297,14 +286,14 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
       {loading ? (
         <div className="bg-card border border-border rounded-xl p-10 text-center">
           <Loader2 size={20} className="animate-spin text-muted-foreground mx-auto mb-2" />
-          <p className="text-[13px] text-muted-foreground">Betöltés...</p>
+          <p className="text-[13px] text-muted-foreground">Loading…</p>
         </div>
       ) : invoices.length === 0 ? (
         <div className="bg-card border-2 border-dashed border-border rounded-xl p-12 text-center">
           <Upload size={28} className="text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-[14px] font-medium text-foreground">Nincs számla a sorban</p>
+          <p className="text-[14px] font-medium text-foreground">No invoices in queue</p>
           <p className="text-[12px] text-muted-foreground mt-1">
-            Kattintson a "Fájlok feltöltése" gombra, vagy húzza ide a fájlokat
+            Click "Upload Invoices" or drag files here
           </p>
         </div>
       ) : (
@@ -315,7 +304,7 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
               inv={inv}
               onValidate={() => openValidator(inv)}
               onDelete={() => setConfirmDelete({
-                invoiceId: inv.id,
+                invoiceId:   inv.id,
                 invoiceName: inv.filename || inv.source_id?.split(/[\\/]/).pop() || inv.id,
               })}
             />
@@ -323,13 +312,13 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
         </div>
       )}
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation */}
       <ConfirmModal
         isOpen={!!confirmDelete}
         icon="🗑"
-        title="Számla törlése"
-        message={`Biztosan törli a(z) "${confirmDelete?.invoiceName}" számlát? Ez a művelet nem visszavonható.`}
-        confirmLabel="Törlés"
+        title="Delete Invoice"
+        message={`Are you sure you want to delete "${confirmDelete?.invoiceName}"? This cannot be undone.`}
+        confirmLabel="Delete"
         confirmVariant="danger"
         onCancel={() => setConfirmDelete(null)}
         onConfirm={async () => {
@@ -346,7 +335,7 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
               <div className="flex items-center gap-2">
                 <Zap size={15} className="text-blue-500" />
                 <h2 className="text-[15px] font-semibold text-foreground">
-                  Számla validálása — {displayName(fullInvoice)}
+                  Validate Invoice — {displayName(fullInvoice)}
                 </h2>
               </div>
               <button
@@ -368,12 +357,11 @@ export default function InvoiceQueue({ onRefreshStats, fileInputRef: externalFil
   )
 }
 
-// ── Invoice card ──────────────────────────────────────────────────
-
+// ── Invoice card ───────────────────────────────────────────────
 function InvoiceCard({ inv, onValidate, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const ps   = inv.processing_status || "extracted"
-  const meta = STATUS_META[ps] || STATUS_META.extracted
+  const ps          = inv.processing_status || "extracted"
+  const meta        = STATUS_META[ps] || STATUS_META.extracted
   const isProcessing = meta.spin
   const canValidate  = ["ocr_ready", "extracted", "pending_review"].includes(ps)
   const canExport    = inv.status === "verified"
@@ -393,9 +381,9 @@ function InvoiceCard({ inv, onValidate, onDelete }) {
           {fileIcon(inv)}
         </div>
 
-        {/* Main content */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Top row: filename + badge + time */}
+          {/* Top row */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[13px] font-semibold text-foreground truncate max-w-[280px]">
               {displayName(inv)}
@@ -406,10 +394,10 @@ function InvoiceCard({ inv, onValidate, onDelete }) {
             </span>
           </div>
 
-          {/* Status bar */}
+          {/* Progress stages */}
           {!hasError && <InvoiceStatusBar invoice={inv} />}
 
-          {/* Error message */}
+          {/* Error */}
           {hasError && (
             <div className="flex items-center gap-2 mt-1.5">
               {inv.processing_error && (
@@ -419,12 +407,12 @@ function InvoiceCard({ inv, onValidate, onDelete }) {
                 </p>
               )}
               <button className="text-[11px] text-red-600 hover:text-red-700 underline flex-shrink-0">
-                Újrafeldolgozás
+                Retry
               </button>
             </div>
           )}
 
-          {/* Due date badge */}
+          {/* Due date */}
           {inv.due_date && (
             <div className="mt-1.5">
               <DueDateBadge dueDate={inv.due_date} />
@@ -456,7 +444,7 @@ function InvoiceCard({ inv, onValidate, onDelete }) {
             </div>
           )}
 
-          {/* Metadata row */}
+          {/* Metadata + actions row */}
           <div className="flex items-center justify-between mt-2.5">
             <div className="text-[12px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
               {inv.vendor_name && <span className="font-medium text-foreground">{inv.vendor_name}</span>}
@@ -476,21 +464,19 @@ function InvoiceCard({ inv, onValidate, onDelete }) {
               )}
             </div>
 
-            {/* Actions */}
+            {/* Action buttons */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {canValidate && (
                 <button
                   onClick={onValidate}
                   className="flex items-center gap-1.5 h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-medium rounded-lg transition-colors"
                 >
-                  <Zap size={11} />
-                  Validálás
+                  <Zap size={11} /> Validate
                 </button>
               )}
               {canExport && (
                 <button className="flex items-center gap-1.5 h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-medium rounded-lg transition-colors">
-                  <Download size={11} />
-                  Exportálás
+                  <Download size={11} /> Export
                 </button>
               )}
               {isProcessing && (
@@ -511,13 +497,13 @@ function InvoiceCard({ inv, onValidate, onDelete }) {
                       onClick={() => { setMenuOpen(false); onValidate() }}
                       className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-muted transition-colors"
                     >
-                      Megnyitás
+                      Open
                     </button>
                     <button
                       onClick={() => { setMenuOpen(false); onDelete() }}
                       className="w-full text-left px-4 py-2.5 text-[12px] text-red-600 hover:bg-red-50 transition-colors"
                     >
-                      Törlés
+                      Delete
                     </button>
                   </div>
                 )}
@@ -541,11 +527,11 @@ function StatusBadge({ ps, meta }) {
       }}
     >
       {meta.spin && <Loader2 size={9} className="animate-spin" />}
-      {!meta.spin && ps === "ocr_ready"  && <CheckCircle size={9} />}
-      {!meta.spin && ps === "verified"   && <CheckCircle size={9} />}
-      {!meta.spin && ps === "exported"   && <CheckCircle size={9} />}
-      {!meta.spin && ps === "rejected"   && <XCircle size={9} />}
-      {!meta.spin && ps === "error"      && <AlertTriangle size={9} />}
+      {!meta.spin && ps === "ocr_ready"      && <CheckCircle size={9} />}
+      {!meta.spin && ps === "verified"       && <CheckCircle size={9} />}
+      {!meta.spin && ps === "exported"       && <CheckCircle size={9} />}
+      {!meta.spin && ps === "rejected"       && <XCircle size={9} />}
+      {!meta.spin && ps === "error"          && <AlertTriangle size={9} />}
       {!meta.spin && ps === "pending_review" && <Clock size={9} />}
       {meta.label}
     </span>
@@ -558,33 +544,13 @@ function InvoiceStatusBar({ invoice }) {
   const DONE_AFTER_EXTRACT = ["extracted","pending_review","ocr_processing","ocr_ready","verified","exported"]
 
   const stages = [
-    {
-      key:    "uploaded",
-      label:  "Feltöltve",
-      done:   true,
-      active: false,
-    },
-    {
-      key:    "extracting",
-      label:  "AI kinyerés",
-      done:   DONE_AFTER_EXTRACT.includes(ps),
-      active: ps === "extracting",
-    },
-    {
-      key:    "preview",
-      label:  "Előnézet",
-      done:   !!(invoice.preview_ready || DONE_AFTER_EXTRACT.includes(ps)),
-      active: ps === "extracting" && !invoice.preview_ready,
-    },
-    {
-      key:    "ready",
-      label:  "Kész",
-      done:   ["extracted","pending_review","ocr_processing","ocr_ready","verified","exported"].includes(ps),
-      active: false,
-    },
+    { key: "uploaded",   label: "Uploaded",      done: true,                                     active: false },
+    { key: "extracting", label: "AI Extraction", done: DONE_AFTER_EXTRACT.includes(ps),          active: ps === "extracting" },
+    { key: "preview",    label: "Preview",        done: !!(invoice.preview_ready || DONE_AFTER_EXTRACT.includes(ps)), active: ps === "extracting" && !invoice.preview_ready },
+    { key: "ready",      label: "Ready",          done: DONE_AFTER_EXTRACT.includes(ps),          active: false },
   ]
 
-  const etaBadge = ps === "extracting" ? "~15 mp — AI elemzés" : null
+  const etaBadge = ps === "extracting" ? "~15s — AI analysis" : null
 
   return (
     <div className="mt-3">
@@ -594,13 +560,11 @@ function InvoiceStatusBar({ invoice }) {
             <div className="flex flex-col items-center gap-1" style={{ minWidth: 46 }}>
               <div className={[
                 "w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0",
-                stage.done
-                  ? "bg-emerald-500 shadow-sm"
-                  : stage.active
-                  ? "bg-blue-500"
-                  : "bg-background border-2 border-border",
+                stage.done   ? "bg-emerald-500 shadow-sm"
+                : stage.active ? "bg-blue-500"
+                : "bg-background border-2 border-border",
               ].join(" ")}>
-                {stage.done && <CheckCircle size={11} className="text-white" />}
+                {stage.done   && <CheckCircle size={11} className="text-white" />}
                 {stage.active && !stage.done && <Loader2 size={10} className="text-white animate-spin" />}
               </div>
               <span className={[

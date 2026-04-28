@@ -7,7 +7,7 @@
 @layer base {
   :root {
     /* Light mode */
-    --background:         0 0% 99%;
+    --background:         220 16% 96%;
     --foreground:         222 25% 10%;
     --card:               0 0% 100%;
     --card-foreground:    222 25% 10%;
@@ -80,4 +80,9 @@
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
+
+  .input-base {
+    @apply w-full h-8 px-3 text-[12px] rounded-lg border border-border bg-background
+           text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500;
+  }
 }
