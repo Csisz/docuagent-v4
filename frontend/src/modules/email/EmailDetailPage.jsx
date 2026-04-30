@@ -1,10 +1,16 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { useGet } from "@/core/hooks/useApi"
 import { api } from "@/core/api"
 import { ArrowLeft, CheckCircle, XCircle, RefreshCw, AlertTriangle, Sparkles, BookOpen } from "lucide-react"
 import ReplyEditor from "./components/ReplyEditor"
+import {
+  getApiErrorMessage,
+  normalizeEmailResponse,
+  normalizeReplyResponse,
+  parseAiDecision,
+} from "./emailResponse"
 
 // ── Status / category configs ──────────────────────────────────
 const STATUS_CFG = {
@@ -60,19 +66,30 @@ function MetaRow({ label, children }) {
 }
 
 function ConfRing({ value }) {
-  const pct   = Math.round((value ?? 0) * 100)
-  const r     = 36
-  const circ  = 2 * Math.PI * r
-  const color = pct >= 85 ? "#10b981" : pct >= 65 ? "#f59e0b" : "#ef4444"
-  const lvl   = pct >= 85 ? "MAGAS" : pct >= 65 ? "KÖZEPES" : "ALACSONY"
-  const lvlCl = pct >= 85 ? "text-emerald-600" : pct >= 65 ? "text-amber-600" : "text-red-500"
+  const pct    = Math.round((value ?? 0) * 100)
+  const r      = 36
+  const circ   = 2 * Math.PI * r
+  const color  = pct >= 85 ? "#10b981" : pct >= 65 ? "#f59e0b" : "#ef4444"
+  const lvl    = pct >= 85 ? "MAGAS" : pct >= 65 ? "KÖZEPES" : "ALACSONY"
+  const lvlCl  = pct >= 85 ? "text-emerald-600" : pct >= 65 ? "text-amber-600" : "text-red-500"
+
+  const [arc, setArc] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => setArc(pct), 80)
+    return () => clearTimeout(t)
+  }, [pct])
+
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="relative w-20 h-20">
         <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
           <circle cx="40" cy="40" r={r} fill="none" stroke="#e5e7eb" strokeWidth="7" />
-          <circle cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="7"
-            strokeDasharray={`${(pct / 100) * circ} ${circ}`} strokeLinecap="round" />
+          <circle
+            cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="7"
+            strokeLinecap="round"
+            strokeDasharray={`${(arc / 100) * circ} ${circ}`}
+            style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1)" }}
+          />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-[15px] font-bold text-foreground">{pct}%</span>
@@ -89,40 +106,86 @@ export default function EmailDetailPage() {
   const navigate     = useNavigate()
   const queryClient  = useQueryClient()
 
-  const [reply, setReply]       = useState(null)  // null = not loaded yet
-  const [actionLoad, setAction] = useState("")
-  const [error, setError]       = useState("")
+  const [reply, setReply]           = useState(null)  // null = not loaded yet
+  const [displayedReply, setDisped] = useState("")
+  const [isTyping, setIsTyping]     = useState(false)
+  const [actionLoad, setAction]     = useState("")
+  const [error, setError]           = useState("")
+  const [message, setMessage]       = useState("")
+  const timerRef                    = useRef(null)
 
-  const { data: resp, isLoading } = useGet(
-    ["email-detail", id],
-    `/email/${id}`,
-    {
-      onSuccess: r => {
-        if (reply === null) setReply(r?.data?.ai_response ?? "")
-      },
+  const { data: resp, isLoading } = useGet(["email-detail", id], `/email/${id}`)
+  const email = normalizeEmailResponse(resp)
+
+  function startTypewriter(text) {
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (!text) { setDisped(""); setIsTyping(false); return }
+    setIsTyping(true)
+    setDisped("")
+    let i = 0
+    timerRef.current = setInterval(() => {
+      i++
+      setDisped(text.slice(0, i))
+      if (i >= text.length) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+        setIsTyping(false)
+      }
+    }, 10)
+  }
+
+  function skipTypewriter(fullText) {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = null
+    setDisped(fullText)
+    setIsTyping(false)
+  }
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
+
+  useEffect(() => {
+    if (reply === null && email) {
+      const text = email.ai_response ?? ""
+      setReply(text)
+      if (text) startTypewriter(text)
+      else setDisped("")
     }
-  )
-  const email = resp?.data
+  }, [email, reply])
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["email-detail", id] })
     queryClient.invalidateQueries({ queryKey: ["emails-list"] })
+    queryClient.invalidateQueries({ queryKey: ["emails-approval-queue"] })
   }
 
   async function doAction(action) {
     setAction(action)
     setError("")
+    setMessage("")
     try {
       if (action === "approve") {
-        await api.post(`/email/${id}/approve`, { reply_override: reply || undefined })
+        await api.post(`/email/${id}/approve`, { reply_override: effectiveReply.trim() || undefined })
+        setMessage("Jóváhagyva.")
       } else if (action === "reject") {
         await api.post(`/email/${id}/reject`, {})
+        setMessage("Elutasítva.")
+      } else if (action === "reply") {
+        const res = await api.post(`/email/reply/${id}`, {})
+        const generatedReply = normalizeReplyResponse(res)
+        if (!generatedReply) throw new Error("A válaszgenerálás nem adott vissza szöveget.")
+        setReply(generatedReply)
+        startTypewriter(generatedReply)
+        setMessage("Válasz elkészült.")
       } else if (action === "reclassify") {
-        await api.post(`/email/classify/${id}`, {})
+        const res = await api.post(`/email/classify/${id}`, {})
+        const classified = normalizeEmailResponse(res)
+        if (classified?.error) throw new Error(classified.error)
+        setMessage("Osztályozás frissítve.")
       }
       invalidate()
     } catch (err) {
-      setError(err.response?.data?.detail || `Hiba: ${action}`)
+      console.error(`Email action failed: ${action}`, err)
+      setError(getApiErrorMessage(err, `Hiba: ${action}`))
     } finally {
       setAction("")
     }
@@ -147,10 +210,12 @@ export default function EmailDetailPage() {
   const sc       = STATUS_CFG[email.status]  ?? STATUS_CFG.new
   const catCfg   = CAT_CFG[email.category]   ?? CAT_CFG.other
   const sentCfg  = SENTIMENT_CFG[email.sentiment]
-  const canApprove = email.status === "ai_answered"
+  const canApprove = ["ai_answered", "needs_attention"].includes(email.status)
   const canReject  = ["ai_answered", "needs_attention"].includes(email.status)
   const canReclass = ["new", "needs_attention"].includes(email.status)
   const effectiveReply = reply ?? email.ai_response ?? ""
+  const hasReply = effectiveReply.trim().length > 0
+  const aiDecision = parseAiDecision(email.ai_decision)
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-5">
@@ -186,6 +251,7 @@ export default function EmailDetailPage() {
             <MetaRow label="Címzett">{email.recipient || "—"}</MetaRow>
             <MetaRow label="Tárgy">{email.subject || "—"}</MetaRow>
             <MetaRow label="Kategória"><Badge cfg={catCfg} /></MetaRow>
+            <MetaRow label="Állapot"><Badge cfg={sc} /></MetaRow>
             {email.domain_tag && <MetaRow label="Domain">{email.domain_tag}</MetaRow>}
             {email.veto_reason && (
               <MetaRow label="Megjegyzés">
@@ -288,7 +354,21 @@ export default function EmailDetailPage() {
             </div>
 
             {canApprove || canReject ? (
-              <ReplyEditor value={effectiveReply} onChange={setReply} />
+              isTyping ? (
+                <div
+                  onClick={() => skipTypewriter(reply ?? "")}
+                  title="Kattints a kihagyáshoz"
+                  className="cursor-pointer rounded-xl border border-purple-200 bg-purple-50/40 px-4 py-3 text-[13px] text-foreground leading-relaxed whitespace-pre-wrap min-h-[140px] select-none"
+                >
+                  {displayedReply}
+                  <span className="inline-block w-[2px] h-[0.9em] bg-purple-500 ml-[1px] align-middle animate-pulse" />
+                </div>
+              ) : (
+                <ReplyEditor
+                  value={effectiveReply}
+                  onChange={v => { setReply(v); setDisped(v) }}
+                />
+              )
             ) : (
               <div className="bg-muted/40 rounded-xl px-4 py-3 text-[13px] text-foreground leading-relaxed whitespace-pre-wrap min-h-[80px]">
                 {email.ai_response || <span className="text-muted-foreground italic">Nincs AI válasz</span>}
@@ -302,13 +382,28 @@ export default function EmailDetailPage() {
               {error}
             </div>
           )}
+          {message && (
+            <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-700">
+              {message}
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="space-y-2">
+            {!email.ai_response && (
+              <button
+                onClick={() => doAction("reply")}
+                disabled={!!actionLoad}
+                className="w-full flex items-center justify-center gap-2 h-10 bg-purple-600 hover:bg-purple-700 text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Sparkles size={15} />
+                {actionLoad === "reply" ? "Generálás…" : "Választ generál"}
+              </button>
+            )}
             {canApprove && (
               <button
                 onClick={() => doAction("approve")}
-                disabled={!!actionLoad}
+                disabled={!!actionLoad || !hasReply}
                 className="w-full flex items-center justify-center gap-2 h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 <CheckCircle size={15} />
@@ -338,11 +433,11 @@ export default function EmailDetailPage() {
           </div>
 
           {/* AI decision raw (collapsed) */}
-          {email.ai_decision && (
+          {aiDecision && (
             <details className="text-[11px] text-muted-foreground">
               <summary className="cursor-pointer hover:text-foreground transition-colors">AI döntés részletei</summary>
               <pre className="mt-2 p-3 bg-muted/50 rounded-lg overflow-x-auto text-[10px] leading-relaxed">
-                {JSON.stringify(email.ai_decision, null, 2)}
+                {JSON.stringify(aiDecision, null, 2)}
               </pre>
             </details>
           )}

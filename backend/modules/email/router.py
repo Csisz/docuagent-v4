@@ -5,6 +5,7 @@ All routes require email_agent module to be enabled for the tenant.
 POST /email/ingest accepts both X-API-Key (n8n) and JWT Bearer (testing).
 """
 import logging
+import json
 import os
 from typing import Optional
 
@@ -40,6 +41,10 @@ class IngestPayload(BaseModel):
 
 class StatusPatch(BaseModel):
     status: str
+
+
+class ApprovePayload(BaseModel):
+    reply_override: Optional[str] = None
 
 
 # ── POST /email/ingest ────────────────────────────────────────
@@ -92,7 +97,13 @@ async def generate_reply(
     if not email:
         raise HTTPException(404, "Email not found")
 
-    result = await service.generate_reply(email_id, tenant_id)
+    try:
+        result = await service.generate_reply(email_id, tenant_id)
+    except RuntimeError as e:
+        if "OPENAI_API_KEY is not configured" in str(e):
+            log.error("Email reply generation failed: OPENAI_API_KEY is not configured")
+            raise HTTPException(503, "OPENAI_API_KEY is not configured")
+        raise
     return resp.ok(result)
 
 
@@ -102,6 +113,7 @@ async def generate_reply(
 @router.post("/{email_id}/approve")
 async def approve_email(
     email_id: str,
+    payload: Optional[ApprovePayload] = None,
     user: dict = Depends(get_current_user),
     _: None = _mod,
 ):
@@ -109,8 +121,19 @@ async def approve_email(
     email = await queries.get_email(email_id, tenant_id)
     if not email:
         raise HTTPException(404, "Email not found")
-    if not email.get("ai_response"):
+
+    reply_text = ((payload.reply_override if payload else None) or email.get("ai_response") or "").strip()
+    if not reply_text:
         raise HTTPException(400, "No reply draft to approve")
+    if reply_text != (email.get("ai_response") or ""):
+        source_docs = email.get("source_docs") or []
+        if isinstance(source_docs, str):
+            try:
+                source_docs = json.loads(source_docs)
+            except json.JSONDecodeError:
+                source_docs = []
+        await queries.update_reply(email_id, reply_text, source_docs, email.get("rag_confidence"))
+        email = {**email, "ai_response": reply_text}
 
     ok = await queries.approve_email(email_id, tenant_id, user.get("user_id") or "")
     if not ok:
@@ -123,7 +146,7 @@ async def approve_email(
             async with httpx.AsyncClient(timeout=10) as client:
                 await client.post(webhook_url, json={
                     "email_id":  email_id,
-                    "reply":     email.get("ai_response"),
+                    "reply":     reply_text,
                     "recipient": email.get("recipient") or email.get("sender"),
                     "subject":   f"Re: {email.get('subject', '')}",
                 })

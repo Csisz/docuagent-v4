@@ -34,6 +34,9 @@ def select_model(task_type: str, confidence_required: float = 0.0) -> str:
 
 
 def _auth_headers() -> dict:
+    if not OPENAI_API_KEY.strip():
+        log.error("OPENAI_API_KEY is not configured")
+        raise RuntimeError("OPENAI_API_KEY is not configured")
     return {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json",

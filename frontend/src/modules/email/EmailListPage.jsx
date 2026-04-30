@@ -1,8 +1,8 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useQueryClient } from "@tanstack/react-query"
 import { useGet } from "@/core/hooks/useApi"
 import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react"
+import { normalizeListResponse } from "./emailResponse"
 
 // ── Status config ──────────────────────────────────────────────
 const STATUS_CFG = {
@@ -78,18 +78,29 @@ function UrgencyBar({ score, urgent }) {
 }
 
 // ── Main ───────────────────────────────────────────────────────
-export default function EmailListPage({ defaultStatus = null }) {
+export default function EmailListPage({ defaultStatus = null, approvalQueue = false }) {
   const [statusFilter, setStatusFilter] = useState(defaultStatus)
   const [page, setPage]                 = useState(1)
   const navigate     = useNavigate()
-  const queryClient  = useQueryClient()
 
-  const url = `/email/list?page=${page}&per_page=20${statusFilter ? `&status=${statusFilter}` : ""}`
-  const { data, isLoading, error } = useGet(["emails-list", statusFilter, page], url)
+  const limit = 20
+  const offset = (page - 1) * limit
+  const url = approvalQueue
+    ? `/email/approval-queue?limit=50`
+    : `/email/list?limit=${limit}&offset=${offset}${statusFilter ? `&status=${statusFilter}` : ""}`
+  const { data, isLoading, error } = useGet(
+    [approvalQueue ? "emails-approval-queue" : "emails-list", statusFilter, page],
+    url,
+  )
 
-  const emails     = data?.items ?? []
-  const total      = data?.total ?? 0
-  const totalPages = data?.pages ?? 1
+  const normalized = normalizeListResponse(data)
+  const emails = approvalQueue
+    ? normalized.items
+        .filter(email => email.status === "needs_attention")
+        .sort((a, b) => (b.urgency_score ?? 0) - (a.urgency_score ?? 0))
+    : normalized.items
+  const total      = approvalQueue ? emails.length : normalized.total
+  const totalPages = approvalQueue ? 1 : normalized.pages
 
   function handleStatusChange(key) {
     setStatusFilter(key)
@@ -108,20 +119,20 @@ export default function EmailListPage({ defaultStatus = null }) {
     <>
       {/* Filter tabs */}
       <div className="flex gap-1 flex-wrap items-center">
-        {FILTER_TABS.map(t => (
-          <button
-            key={String(t.key)}
-            onClick={() => handleStatusChange(t.key)}
-            className={[
-              "px-3 py-1.5 text-[12px] font-medium rounded-lg border transition-all duration-150",
-              statusFilter === t.key
-                ? "bg-foreground text-background border-foreground"
-                : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-foreground/20",
-            ].join(" ")}
-          >
-            {t.label}
-          </button>
-        ))}
+        {!approvalQueue && FILTER_TABS.map(t => (
+            <button
+              key={String(t.key)}
+              onClick={() => handleStatusChange(t.key)}
+              className={[
+                "px-3 py-1.5 text-[12px] font-medium rounded-lg border transition-all duration-150",
+                statusFilter === t.key
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-foreground/20",
+              ].join(" ")}
+            >
+              {t.label}
+            </button>
+          ))}
         {total > 0 && (
           <span className="ml-auto text-[11px] text-muted-foreground">{total} email</span>
         )}

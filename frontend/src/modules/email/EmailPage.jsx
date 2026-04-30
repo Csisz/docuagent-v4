@@ -26,7 +26,7 @@ export default function EmailPage() {
 
       {/* Content */}
       {tab === "inbox"    && <EmailListPage key="inbox" />}
-      {tab === "approval" && <EmailListPage key="approval" defaultStatus="ai_answered" />}
+      {tab === "approval" && <EmailListPage key="approval" approvalQueue />}
 
     </div>
   )
