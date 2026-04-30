@@ -287,7 +287,8 @@ _mod = Depends(require_module("email_agent"))
 ```
 
 For the /ingest endpoint: accept BOTH X-API-Key (n8n) and JWT Bearer (testing).
-After approve: call n8n WF-E2 webhook with {email_id, reply, recipient, subject}.
+After approve: call n8n WF-E2 webhook with {email_id, to, sender, recipient, subject, reply}.
+Use `to` (cleaned original sender email) as the Gmail destination; `recipient` is the original inbound mailbox.
 Read N8N_EMAIL_SEND_WEBHOOK from env.
 
 ## STEP 6: Register router in main.py
@@ -422,8 +423,8 @@ Create file: n8n/workflows/WF-E2-email-send.json
 Flow:
   Webhook (POST /webhook/email-send)
     → Gmail: Send Email
-      To: {{ $json.body.recipient }}
-      Subject: Re: {{ $json.body.subject }}
+      To: {{$json.body.to || $json.body.sender}}
+      Subject: {{ $json.body.subject }}
       Body: {{ $json.body.reply }}
     → HTTP Request: PATCH {{$env.BACKEND_URL}}/email/{{ $json.body.email_id }}/status
       Body: { status: "sent" }
@@ -443,8 +444,10 @@ BACKEND_URL=http://backend:8000
 ```powershell
 Invoke-RestMethod -Method POST -Uri "http://localhost:5678/webhook/email-send" -ContentType "application/json" -Body '{
   "email_id": "test-id",
-  "recipient": "test@example.com",
-  "subject": "Test",
+  "to": "customer@example.com",
+  "sender": "Customer Name <customer@example.com>",
+  "recipient": "our-mailbox@gmail.com",
+  "subject": "Re: Test",
   "reply": "Test reply"
 }'
 ```

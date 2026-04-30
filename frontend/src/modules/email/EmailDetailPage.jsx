@@ -117,6 +117,13 @@ export default function EmailDetailPage() {
   const { data: resp, isLoading } = useGet(["email-detail", id], `/email/${id}`)
   const email = normalizeEmailResponse(resp)
 
+  useEffect(() => {
+    setReply(null)
+    setDisped("")
+    setError("")
+    setMessage("")
+  }, [id])
+
   function startTypewriter(text) {
     if (timerRef.current) clearInterval(timerRef.current)
     if (!text) { setDisped(""); setIsTyping(false); return }
@@ -148,6 +155,9 @@ export default function EmailDetailPage() {
       const text = email.ai_response ?? ""
       setReply(text)
       setDisped(text)
+    } else if (email?.ai_response && !reply) {
+      setReply(email.ai_response)
+      setDisped(email.ai_response)
     }
   }, [email, reply])
 
@@ -215,6 +225,7 @@ export default function EmailDetailPage() {
   const effectiveReply = reply ?? email.ai_response ?? ""
   const hasReply = effectiveReply.trim().length > 0
   const aiDecision = parseAiDecision(email.ai_decision)
+  const missingAiDraft = email.status === "ai_answered" && !email.ai_response
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-5">
@@ -386,17 +397,22 @@ export default function EmailDetailPage() {
               {message}
             </div>
           )}
+          {missingAiDraft && (
+            <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-700">
+              Az email AI válasz státuszban van, de még nincs választervezet. Kattints a Választ generál gombra.
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="space-y-2">
-            {!email.ai_response && (
+            {canApprove && (
               <button
                 onClick={() => doAction("reply")}
                 disabled={!!actionLoad}
                 className="w-full flex items-center justify-center gap-2 h-10 bg-purple-600 hover:bg-purple-700 text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 <Sparkles size={15} />
-                {actionLoad === "reply" ? "Generálás…" : "Választ generál"}
+                {actionLoad === "reply" ? "Generálás…" : hasReply ? "Újragenerálás" : "Választ generál"}
               </button>
             )}
             {canApprove && (

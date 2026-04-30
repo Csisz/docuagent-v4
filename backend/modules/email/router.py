@@ -7,6 +7,7 @@ POST /email/ingest accepts both X-API-Key (n8n) and JWT Bearer (testing).
 import logging
 import json
 import os
+from email.utils import parseaddr
 from typing import Optional
 
 import httpx
@@ -45,6 +46,13 @@ class StatusPatch(BaseModel):
 
 class ApprovePayload(BaseModel):
     reply_override: Optional[str] = None
+
+
+def _extract_email_address(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    _, address = parseaddr(value)
+    return (address or value).strip()
 
 
 # ── POST /email/ingest ────────────────────────────────────────
@@ -125,6 +133,11 @@ async def approve_email(
     reply_text = ((payload.reply_override if payload else None) or email.get("ai_response") or "").strip()
     if not reply_text:
         raise HTTPException(400, "No reply draft to approve")
+
+    reply_to = _extract_email_address(email.get("sender"))
+    if not reply_to or "@" not in reply_to:
+        raise HTTPException(400, "Original sender email is missing or invalid")
+
     if reply_text != (email.get("ai_response") or ""):
         source_docs = email.get("source_docs") or []
         if isinstance(source_docs, str):
@@ -146,9 +159,11 @@ async def approve_email(
             async with httpx.AsyncClient(timeout=10) as client:
                 await client.post(webhook_url, json={
                     "email_id":  email_id,
-                    "reply":     reply_text,
-                    "recipient": email.get("recipient") or email.get("sender"),
+                    "to":        reply_to,
+                    "sender":    email.get("sender"),
+                    "recipient": email.get("recipient"),
                     "subject":   f"Re: {email.get('subject', '')}",
+                    "reply":     reply_text,
                 })
             log.info(f"n8n WF-E2 triggered for email {email_id}")
         except Exception as e:

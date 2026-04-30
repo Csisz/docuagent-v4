@@ -83,6 +83,24 @@ async def get_email_policy(tenant_id: str) -> dict:
     return policy
 
 
+def _auto_reply_skip_reason(email: dict, policy: dict, out, compliance) -> Optional[str]:
+    if email.get("ai_response"):
+        return "existing_reply"
+    if not policy.get("auto_reply_enabled", True):
+        return "disabled_by_policy"
+    if out.confidence < policy.get("conf_threshold", 0.72):
+        return "low_confidence"
+    if out.category == "complaint" and not policy.get("complaint_auto_reply", False):
+        return "complaint_blocked"
+    if compliance.senior_required:
+        return "senior_required"
+    if hasattr(out, "can_answer") and not out.can_answer:
+        return "cannot_answer"
+    if not compliance.can_answer:
+        return "cannot_answer"
+    return None
+
+
 async def classify_email(email_id: str, tenant_id: str) -> dict:
     """
     Full 5-layer pipeline:
@@ -161,7 +179,7 @@ async def classify_email(email_id: str, tenant_id: str) -> dict:
         f"classify_email: {email_id[:8]} → {compliance.status} "
         f"conf={out.confidence} urgency={out.urgency_score} domain={compliance.domain_tag}"
     )
-    return {
+    result = {
         "status":         compliance.status,
         "category":       out.category,
         "confidence":     out.confidence,
@@ -173,6 +191,22 @@ async def classify_email(email_id: str, tenant_id: str) -> dict:
         "senior_required": compliance.senior_required,
         "booking_intent": out.booking_intent,
     }
+
+    skip_reason = _auto_reply_skip_reason(email, policy, out, compliance)
+    if skip_reason:
+        log.info(f"auto_reply skipped for email {email_id}: {skip_reason}")
+        result["auto_reply_skipped"] = skip_reason
+        return result
+
+    try:
+        reply_result = await generate_reply(email_id, tenant_id)
+        result["auto_reply_generated"] = True
+        result["reply"] = reply_result.get("reply")
+    except Exception as e:
+        log.warning(f"auto_reply generation failed for email {email_id}: {e}")
+        result["auto_reply_error"] = str(e)
+
+    return result
 
 
 async def generate_reply(email_id: str, tenant_id: str) -> dict:

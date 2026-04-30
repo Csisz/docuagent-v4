@@ -18,8 +18,8 @@
     {
       "parameters": {
         "operation": "send",
-        "sendTo": "={{ $json.body.recipient }}",
-        "subject": "={{ 'Re: ' + $json.body.subject }}",
+        "sendTo": "={{$json.body.to || $json.body.sender}}",
+        "subject": "={{ $json.body.subject }}",
         "emailType": "text",
         "message": "={{ $json.body.reply }}",
         "options": {}
