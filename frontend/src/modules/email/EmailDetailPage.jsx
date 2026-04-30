@@ -147,8 +147,7 @@ export default function EmailDetailPage() {
     if (reply === null && email) {
       const text = email.ai_response ?? ""
       setReply(text)
-      if (text) startTypewriter(text)
-      else setDisped("")
+      setDisped(text)
     }
   }, [email, reply])
 
