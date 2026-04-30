@@ -13,13 +13,8 @@ export default defineConfig({
     historyApiFallback: true,
     port: 5173,
     proxy: {
-      "/core":     { target: "http://localhost:8001", changeOrigin: true },
-      "/api":      { target: "http://localhost:8001", changeOrigin: true },
-      "/invoice":  { target: "http://localhost:8001", changeOrigin: true },
-      "/admin":    { target: "http://localhost:8001", changeOrigin: true },
-      "/settings": { target: "http://localhost:8001", changeOrigin: true },
-      "/document": { target: "http://localhost:8001", changeOrigin: true },
-      "/email":    { target: "http://localhost:8001", changeOrigin: true },
+      "/core": { target: "http://localhost:8000", changeOrigin: true },
+      "/api":  { target: "http://localhost:8000", changeOrigin: true },
     },
   },
 })
