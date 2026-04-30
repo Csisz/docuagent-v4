@@ -129,7 +129,12 @@
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "id": "wf-e1-email-ingest-v4",
-  "meta": { "instanceId": "docuagent-v4" }
+  "meta": {
+    "instanceId": "docuagent-v4",
+    "notes": "After import: set Gmail credential, set BACKEND_URL and DOCUAGENT_API_KEY in n8n env vars, activate."
+  }
 }

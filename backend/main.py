@@ -103,8 +103,9 @@ app.include_router(admin_router)
 from modules.invoice.router import router as invoice_router
 app.include_router(invoice_router)
 
+from modules.email.router import router as email_router
+app.include_router(email_router)
+
 # Uncomment as modules are implemented:
-# from modules.email.router    import router as email_router
 # from modules.document.router import router as document_router
-# app.include_router(email_router)
 # app.include_router(document_router)

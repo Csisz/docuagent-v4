@@ -1,0 +1,127 @@
+"""
+Intake Layer — entity extraction from inbound email.
+
+Runs concurrently with knowledge.py retrieval.
+Extracts: invoice_ids, dates, amounts, company_names, urgency_signals.
+"""
+import json
+import logging
+from dataclasses import dataclass, field
+from typing import Optional
+
+from core.ai_engine import _chat as ai_chat, MODEL_MINI
+
+log = logging.getLogger("docuagent")
+
+_EXTRACT_SYSTEM = """You are an entity extractor. Extract named entities from the email text.
+Respond ONLY with valid JSON matching this schema:
+{
+  "invoice_ids": ["string"],
+  "dates": ["string"],
+  "amounts": ["string"],
+  "company_names": ["string"],
+  "urgency_signals": ["string"]
+}
+
+Rules:
+- invoice_ids: any invoice number, order ID, reference number (e.g. "INV-2024-001", "SZ-123")
+- dates: explicit dates or deadlines mentioned (e.g. "2024-03-15", "March 15", "határidő: április 5")
+- amounts: monetary values (e.g. "€500", "50 000 Ft", "1.200 EUR")
+- company_names: organization names mentioned (not the sender's own company)
+- urgency_signals: words/phrases that signal urgency (e.g. "sürgős", "azonnal", "lejárt", "urgent", "asap")
+- If none found for a category, return empty array []
+"""
+
+
+def _normalize_hu_dates(dates: list) -> list:
+    """Normalize Hungarian date formats to ISO 8601."""
+    import re
+    normalized = []
+    hu_months = {
+        "január": "01", "február": "02", "március": "03", "április": "04",
+        "május": "05", "június": "06", "július": "07", "augusztus": "08",
+        "szeptember": "09", "október": "10", "november": "11", "december": "12",
+        "jan": "01", "feb": "02", "már": "03", "ápr": "04",
+        "máj": "05", "jún": "06", "júl": "07", "aug": "08",
+        "szept": "09", "okt": "10", "nov": "11", "dec": "12",
+    }
+    for d in dates:
+        if re.match(r"\d{4}-\d{2}-\d{2}", d):
+            normalized.append(d)
+            continue
+        m = re.match(r"(\d{4})[.\s]+(\d{1,2})[.\s]+(\d{1,2})", d)
+        if m:
+            normalized.append(f"{m.group(1)}-{m.group(2).zfill(2)}-{m.group(3).zfill(2)}")
+            continue
+        for hu_month, num in hu_months.items():
+            pattern = rf"{hu_month}\w*\.?\s+(\d{{1,2}})"
+            m2 = re.search(pattern, d.lower())
+            if m2:
+                normalized.append(f"????-{num}-{m2.group(1).zfill(2)}")
+                break
+        else:
+            normalized.append(d)
+    return normalized
+
+
+def _normalize_hu_amounts(amounts: list) -> list:
+    """Normalize Hungarian amount formats: '150 000 Ft' → '150000 HUF'."""
+    import re
+    normalized = []
+    for a in amounts:
+        cleaned = re.sub(r"\s+", "", a)
+        cleaned = re.sub(r"(?i)ft\.?", " HUF", cleaned)
+        cleaned = re.sub(r"(?i)forint", " HUF", cleaned)
+        normalized.append(cleaned.strip())
+    return normalized
+
+
+@dataclass
+class IntakeContext:
+    invoice_ids: list = field(default_factory=list)
+    dates: list = field(default_factory=list)
+    amounts: list = field(default_factory=list)
+    company_names: list = field(default_factory=list)
+    urgency_signals: list = field(default_factory=list)
+    raw_entities: dict = field(default_factory=dict)
+
+
+async def process(
+    subject: str,
+    body: str,
+    policy: dict,
+    tenant_id: Optional[str] = None,
+) -> IntakeContext:
+    """
+    Extract entities from email subject + body.
+    Returns empty IntakeContext if extraction is disabled or fails.
+    """
+    if not policy.get("entity_extraction_enabled", True):
+        return IntakeContext()
+
+    text = f"Subject: {subject}\n\n{(body or '')[:2000]}"
+
+    try:
+        content, _ = await ai_chat(
+            messages=[
+                {"role": "system", "content": _EXTRACT_SYSTEM},
+                {"role": "user",   "content": text},
+            ],
+            max_tokens=300,
+            json_mode=True,
+            task_type="extract_entities",
+            model=MODEL_MINI,
+            tenant_id=tenant_id,
+        )
+        parsed = json.loads(content)
+        return IntakeContext(
+            invoice_ids=parsed.get("invoice_ids", []),
+            dates=_normalize_hu_dates(parsed.get("dates", [])),
+            amounts=_normalize_hu_amounts(parsed.get("amounts", [])),
+            company_names=parsed.get("company_names", []),
+            urgency_signals=parsed.get("urgency_signals", []),
+            raw_entities=parsed,
+        )
+    except Exception as e:
+        log.warning(f"Intake entity extraction failed: {e}")
+        return IntakeContext()

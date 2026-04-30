@@ -18,10 +18,11 @@ import LoginPage          from "@/pages/LoginPage"
 import DashboardPage      from "@/pages/DashboardPage"
 import ApprovalsPage      from "@/pages/ApprovalsPage"
 
-import InvoicePage   from "@/modules/invoice/InvoicePage"
-import SettingsPage  from "@/pages/SettingsPage"
-import AdminPage     from "@/pages/admin/AdminPage"
-// import EmailPage    from "@/modules/email/EmailPage"
+import InvoicePage      from "@/modules/invoice/InvoicePage"
+import EmailPage        from "@/modules/email/EmailPage"
+import EmailDetailPage  from "@/modules/email/EmailDetailPage"
+import SettingsPage     from "@/pages/SettingsPage"
+import AdminPage        from "@/pages/admin/AdminPage"
 // import DocumentPage from "@/modules/document/DocumentPage"
 
 export default function App() {
@@ -37,10 +38,11 @@ export default function App() {
               <Route path="/approvals" element={<ApprovalsPage />} />
 
               {/* Module routes — wrapped in ModuleRoute */}
-              <Route path="/invoice/*"  element={<ModuleRoute module="invoice_agent"><InvoicePage /></ModuleRoute>} />
+              <Route path="/invoice/*" element={<ModuleRoute module="invoice_agent"><InvoicePage /></ModuleRoute>} />
+              <Route path="/email"     element={<ModuleRoute module="email_agent"><EmailPage /></ModuleRoute>} />
+              <Route path="/email/:id" element={<ModuleRoute module="email_agent"><EmailDetailPage /></ModuleRoute>} />
               <Route path="/settings"  element={<SettingsPage />} />
               <Route path="/admin"     element={<AdminRoute><AdminPage /></AdminRoute>} />
-              {/* <Route path="/email/*"   element={<ModuleRoute module="email_agent"><EmailPage /></ModuleRoute>} /> */}
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
